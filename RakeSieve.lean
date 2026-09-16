@@ -46,21 +46,11 @@ def init : RakeSieve :=
         specialize hn2' p';  simp[hp2] at hn2'
         exact hn2' Nat.prime_two
     hCinR := by
-      -- clearly 3 isn't divisible by 2, so is in r
-      unfold R; simp; intro q hqle hq'
-      have hp2 : (p : Nat) = 2 := rfl
-      have hq2 : 2 ≤ q := Nat.Prime.two_le hq'
-      have : q = 2 := by omega
-      aesop
+      -- generic base-case fact: 3 ∈ R 2
+      simpa [p] using three_mem_R_two
     hRmin := by
-      -- to show that every number in R 2 is ≥ 3,
-      -- show that an r∈R 2 where r<3 leads to a contradiction.
-      dsimp[R]; intro r ⟨hr, hrr⟩; by_contra h; simp_all
-      -- r ≥ 2 and r < 3, so r must be 2
-      have r2 : r = 2 := by omega
-      -- but R 2 means not divisible by primes ≤ 2
-      -- now we can use hrr to prove ¬2∣2, which is absurd
-      have := Nat.prime_two; aesop }
+      -- generic base-case fact: 3 is least in R 2
+      simpa [p] using three_le_of_mem_R_two }
 
 def next (rs₀ : RakeSieve) (hC₀: Nat.Prime rs₀.c) (hNS: nosk' rs₀.p rs₀.c): RakeSieve :=
   let h₀ := rs₀.prop

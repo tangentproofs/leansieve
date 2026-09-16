@@ -15,6 +15,27 @@ open PrimeSieveState
 -- In a sieve, these are the numbers that haven't yet been "sifted out."
 def R(P:Nat) : Set Nat := { n | n≥2 ∧ ∀q≤P, Nat.Prime q → ¬q∣n }
 
+/-- Base case for any prime sieve: after removing multiples of 2, 3 remains in the residue. -/
+theorem three_mem_R_two : (3 : Nat) ∈ R 2 := by
+  unfold R
+  refine ⟨by decide, ?_⟩
+  intro q hqle hq'
+  have : q = 2 := by
+    have := Nat.Prime.two_le hq'
+    omega
+  subst this
+  decide
+
+/-- Base case for any prime sieve: 3 is a lower bound of `R 2` (hence its minimum with `three_mem_R_two`). -/
+theorem three_le_of_mem_R_two : ∀ r ∈ R 2, (3 : Nat) ≤ r := by
+  intro r ⟨hr, hrr⟩
+  by_contra h
+  simp at h
+  have r2 : r = 2 := by omega
+  have := hrr 2 (by omega) Nat.prime_two
+  rw [r2] at this
+  exact this (dvd_refl _)
+
 /-- everything in R is greater than P. we use this to show C > P later. -/
 lemma r_gt_p (p:Nat) : (∀r∈R p, r > p) := by
   -- argument: R and S together say ∀ p:prime ≤ P, ¬ p∣r
@@ -192,3 +213,35 @@ structure PrimeSieve  where
 
 def PrimeSieve.next (x:PrimeSieve α) : PrimeSieve α :=
   { state := nextState x.state }
+
+/-- Lift a driven sieve state machine to a `PrimeGen`. -/
+instance : PrimeGen (PrimeSieve α) where
+  P s := PrimeSieveState.P s.state
+  next := PrimeSieve.next (α := α)
+  hP' s := by
+    intro ⟨q, hq, hgt, hlt⟩
+    have hc' := c_prime α s.state
+    have hns := no_skipped_prime α s.state
+    have hEq : PrimeSieveState.P (nextState (α := α) s.state) = C s.state :=
+      (PrimeSieveState.hNext (α := α) s.state hc' hns rfl).left
+    have hlt' : q < C s.state := by
+      -- hlt : q < PrimeGen.P (next s) = PrimeSieveState.P (nextState s.state)
+      change q < (PrimeSieveState.P (nextState (α := α) s.state) : Nat) at hlt
+      simpa [hEq] using hlt
+    have hgt' : (PrimeSieveState.P s.state : Nat) < q := hgt
+    exact hns ⟨q, hq, hgt', hlt'⟩
+  hP_lt s := by
+    have hc' := c_prime α s.state
+    have hns := no_skipped_prime α s.state
+    have hEq : PrimeSieveState.P (nextState (α := α) s.state) = C s.state :=
+      (PrimeSieveState.hNext (α := α) s.state hc' hns rfl).left
+    have hgt := c_gt_p α s.state
+    -- goal: PrimeGen.P s < PrimeGen.P (next s)
+    change (PrimeSieveState.P s.state : Nat) <
+      PrimeSieveState.P (nextState (α := α) s.state)
+    simpa [hEq] using hgt
+
+/-- Start a `PrimeSieve` from a concrete sieve state. -/
+def PrimeSieve.start {β : Type} [PrimeSieveState β] [PrimeSieveDriver β] (s : β) :
+    PrimeSieve β :=
+  { state := s }

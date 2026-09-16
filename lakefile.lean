@@ -9,6 +9,7 @@ lean_lib ASeq { }
 lean_lib Rake { }
 lean_lib RakeMap { }
 lean_lib RakeSieve { }
+lean_lib Results { }
 
 @[default_target]
 lean_exe leansieve {
