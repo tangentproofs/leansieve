@@ -10,11 +10,40 @@ structure RakeSieve where
   hprop : ∀ n:Nat, prop n ↔ n ∈ R p
   hCinR : c ∈ R p
   hRmin : ∀ r ∈ R p, c ≤ r
-  -- Q : Array RakeMap     -- queue of found primes
+  -- Future: maintain an explicit FIFO of primes < p^2 (see `ksBelowHorizon`).
 
 namespace RakeSieve
 
 open RakeMap
+
+/-- Horizon after sieving primes ≤ `p`: every remaining value below this is prime
+(`mem_R_lt_sq_prime`). -/
+def horizon (rs : RakeSieve) : Nat := (rs.p : Nat) ^ 2
+
+/-- Constant terms (`ks`) of the current rake that lie strictly below `p^2`.
+These are exactly the primes that can be queued without further partitioning
+(issue #2 / OldMain's `|q|` horizon filter). -/
+def ksBelowHorizon (rs : RakeSieve) : List Nat :=
+  rs.rm.rake.ks.filter (fun k => k < rs.horizon)
+
+/-- Every constant term of the rake is in the residue `R p`. -/
+theorem ks_mem_R (rs : RakeSieve) {k : Nat} (hk : k ∈ rs.rm.rake.ks) :
+    k ∈ R rs.p := by
+  have hterm : ∃ m, rs.rm.rake.term m = k := by
+    refine (rs.rm.rake.term_iff k).mpr ?_
+    exact ⟨k, hk, 0, by simp⟩
+  have hprop : rs.prop k := (rs.rm.hbij k).mpr hterm
+  exact (rs.hprop k).mp hprop
+
+/-- Queued constants below the horizon are prime. -/
+theorem ksBelowHorizon_prime (rs : RakeSieve) :
+    ∀ k ∈ rs.ksBelowHorizon, Nat.Prime k := by
+  intro k hk
+  rw [ksBelowHorizon, List.mem_filter] at hk
+  obtain ⟨hk_ks, hlt_dec⟩ := hk
+  have hlt : k < rs.horizon := of_decide_eq_true (by simpa [horizon] using hlt_dec)
+  have hinR := ks_mem_R rs hk_ks
+  exact mem_R_lt_sq_prime rs.p.prop hinR hlt
 
 def init : RakeSieve :=
   let rm : RakeMap (λn => n≥2 ∧ ¬2∣n) := rm_ge2 |>.rem 2 (by simp) (by
@@ -51,6 +80,9 @@ def init : RakeSieve :=
     hRmin := by
       -- generic base-case fact: 3 is least in R 2
       simpa [p] using three_le_of_mem_R_two }
+
+set_option linter.hashCommand false
+#guard (ksBelowHorizon init) = [3]
 
 def next (rs₀ : RakeSieve) (hC₀: Nat.Prime rs₀.c) (hNS: nosk' rs₀.p rs₀.c): RakeSieve :=
   let h₀ := rs₀.prop
