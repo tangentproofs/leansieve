@@ -53,6 +53,21 @@ lemma r_gt_p (p:Nat) : (∀r∈R p, r > p) := by
   aesop
 
 
+/-- After removing multiples of all primes ≤ `P`, every remaining
+`n ∈ R P` with `n < P^2` is prime. This is the fact that lets a sieve
+queue primes below the horizon `P^2` without further partitioning. -/
+theorem mem_R_lt_sq_prime {P n : Nat} (_hP : Nat.Prime P)
+    (hn : n ∈ R P) (hlt : n < P ^ 2) : Nat.Prime n := by
+  by_contra hnp
+  have hnpos : 0 < n := Nat.zero_lt_of_lt hn.left
+  have hne1 : n ≠ 1 := ne_of_gt (Nat.lt_of_succ_le hn.left)
+  have hsq : Nat.minFac n ^ 2 ≤ n := Nat.minFac_sq_le_self hnpos hnp
+  have hmf_lt : Nat.minFac n < P := by
+    have : Nat.minFac n ^ 2 < P ^ 2 := lt_of_le_of_lt hsq hlt
+    exact (Nat.pow_lt_pow_iff_left (by decide : (2 : Nat) ≠ 0)).mp this
+  have hmf_le : Nat.minFac n ≤ P := Nat.le_of_lt hmf_lt
+  exact hn.right (Nat.minFac n) hmf_le (Nat.minFac_prime hne1) (Nat.minFac_dvd n)
+
 /- if p₁ is the next consecutive prime after p₀ then
   R p₁ = { n:(R p₀) | ¬ p₁∣n }
   This corresponds to the idea that each time you identify

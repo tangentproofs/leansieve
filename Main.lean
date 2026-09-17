@@ -9,4 +9,4 @@ def main : IO Unit := do
     s := s.next
   IO.println <| r.reverse
 
-#eval main
+#eval! main
